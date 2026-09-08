@@ -3,6 +3,8 @@
 ![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-orange.svg)
 
+*( 🇧🇷 Para Português, veja [README.pt-br.md](README.pt-br.md) )*
+
 A specialized plugin and skill for **Claude Code**, meticulously designed to manage your token budget, shield the **Prompt Cache**, calibrate models/effort, and keep the context window surgical and clean during your development sessions.
 
 **Claude Code** is a powerful agentic coding tool, but continuous usage in complex projects can quickly lead to context bloat, unnecessary API costs (due to continuous token reprocessing), and execution confusion if the context window isn't well managed.
