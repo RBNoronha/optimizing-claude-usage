@@ -10,6 +10,18 @@ For a deep dive into the 5 optimization levers (Prompt Caching, Context Hygiene,
 
 ## Core Instructions
 
+## Session Optimization Workflow
+
+Copy this checklist into your response and track your progress when auditing a session:
+
+```
+Optimization Progress:
+- [ ] Step 1: Pre-Flight Context Audit
+- [ ] Step 2: Session Hygiene Enforcement
+- [ ] Step 3: Tool Execution & Output Control
+- [ ] Step 4: Batching & Delegation
+```
+
 ### Step 1: Pre-Flight Context Audit
 When starting a task or when prompted to audit:
 - Check active MCP servers via `/context` or `/mcp`. Advise disabling unused servers to reduce token overhead.
