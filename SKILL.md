@@ -1,6 +1,6 @@
 ---
 name: optimizing-claude-usage
-description: Use when managing Claude usage/budget — context is trending past ~150k tokens, a session has run for hours, subagents are being spawned reflexively, or the same large content is being re-sent. Covers prompt cache preservation, context hygiene, effort calibration, tool-call batching, subagent controls, and model-specific nuances (Sonnet 5, Opus 5, Fable 5.1).
+description: Use when managing Claude usage/budget — context is trending past ~150k tokens, a session has run for hours, subagents are being spawned reflexively, or the same large content is being re-sent. Covers prompt cache preservation, context hygiene, MCP/tool overhead reduction, effort calibration, tool-call batching, subagent controls, and model-specific nuances (Sonnet 5, Opus 5, Fable 5.1).
 ---
 
 # Optimizing Claude Usage & Prompting Best Practices
@@ -12,7 +12,7 @@ Reduce token consumption and redundant API/CLI calls without degrading output qu
 2. **Prompt cache preservation:** Keeping the prefix intact so history reads run at ~10% cost.
 3. **Model & effort fit:** Matching both the model tier and thinking budget to actual task complexity.
 
-**Core principle:** The cheapest token is the one you never resend. Most waste comes from carrying stale or irrelevant context forward and breaking prompt caching mid-flight.
+**Core principle:** The cheapest token is the one you never resend. Most waste comes from carrying stale or irrelevant context forward, loading unnecessary tool definitions upfront, and breaking prompt caching mid-flight.
 
 ---
 
@@ -21,6 +21,7 @@ Reduce token consumption and redundant API/CLI calls without degrading output qu
 - Context window is approaching ~150k tokens and a logical milestone is reached.
 - A session has been running across multiple disparate tasks or features.
 - Subagents are being spawned reflexively for trivial, one-step lookups.
+- Multiple MCP servers are connected, causing heavy prompt overhead before user input.
 - Large artifacts (logs, bundle outputs, full test suites, specs) are accumulating in history.
 - Switching between different models (Sonnet 5, Opus 5, Fable 5.1) or tuning thinking effort.
 
@@ -53,12 +54,14 @@ Every turn resends the entire conversation history (or its compaction summary). 
 
 ---
 
-## Lever 3: Tool Use, Batching & Noisy Commands
+## Lever 3: Advanced Tool Use & MCP Management
 
-Terminal and tool outputs stay in context for every remaining turn. Unmanaged outputs quickly dominate token consumption.
+According to Anthropic's engineering benchmarks, 5 connected MCP servers can inject 55k+ tokens before any conversation begins, reaching 100k+ with tools like Jira. Moreover, unmanaged raw tool outputs quickly flood the context window.
 
-- **Enforce quiet flags on repeated commands:** Test runners and linters printing hundreds of passing lines bloat context. Use dot/compact reporters (e.g., `vitest run <file> --reporter=dot`, `pytest -q`). Store these exact command invocations inside `CLAUDE.md`.
+- **Avoid the "MCP Tax":** Audit connected MCP servers at the start with `/mcp` or `/context`. If a session only requires git and local tests, disable external database, Slack, or ticketing MCPs. When running from the CLI, consider `--strict-mcp-config` or restricting tools via `--tools`.
+- **Programmatic tool calling & output filtering:** Never dump multi-megabyte log files or full API JSON payloads into context. Filter at the source using bash pipelines (e.g. `grep`, `awk`, `head -n 50`) or node/python scripts so only synthesized findings enter the conversation.
 - **Batch independent tool calls (Fable 5.1 / Opus 5 / Sonnet 5):** When reading multiple files or checking multiple symbols, batch them into a single turn rather than sequential turns. This cuts down intermediate round-trips and repeated prompt cache reads.
+- **Enforce quiet flags on repeated commands:** Test runners and linters printing hundreds of passing lines bloat context. Use dot/compact reporters (e.g., `vitest run <file> --reporter=dot`, `pytest -q`). Store these exact command invocations inside `CLAUDE.md`.
 - **Control subagent delegation:**
   - **Delegate when:** A task creates massive intermediate noise (searching raw server logs, broad grepping, evaluating large directories) where only the final synthesis matters. Subagents operate in clean, isolated context windows, shielding the parent session.
   - **Do inline when:** Executing single greps, single file inspections, or quick edits. The briefing overhead and independent setup of a subagent costs more than running it directly.
@@ -104,6 +107,7 @@ Unnecessary verbosity in model output is expensive because output (decode) token
 - [ ] Is the briefing prompt shorter and simpler than doing the work inline?
 
 **Before kicking off a task:**
+- [ ] Are connected MCP servers trimmed down to only what is needed?
 - [ ] Are `/model` and `/effort` locked in for the duration of this session?
 - [ ] Are test commands configured with quiet flags?
 - [ ] Are target files referenced via `@-mentions`?
@@ -114,6 +118,7 @@ Unnecessary verbosity in model output is expensive because output (decode) token
 
 | Mistake | Root Cause / Impact | Correct Strategy |
 |---|---|---|
+| Leaving unused MCP servers active | Injects 30k-100k+ schema tokens on turn 1 | Disable unneeded servers via `/mcp` or config |
 | Changing `/model` or `/effort` mid-task | Invalidates the prompt cache, causing expensive re-prefill | Set once at session start; `/clear` before changing |
 | Compacting right before ending session | Pays summarization cost with 0 subsequent turns to benefit | Leave uncompacted if closing the session |
 | Neglecting `/rewind` after bad turns | Clutters history with failed reasoning | Use `/rewind` to prune bad turns without cache penalty |
