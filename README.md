@@ -1,111 +1,116 @@
 # Optimizing Claude Code Usage & Prompting Skill ⚡
 
-Um plugin e skill especializada para o **Claude Code**, desenhada meticulosamente para gerenciar seu orçamento de tokens, blindar o **Prompt Cache**, calibrar modelos/esforço e manter a janela de contexto limpa e cirúrgica durante suas sessões de desenvolvimento.
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
+![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-orange.svg)
 
-O **Claude Code** é uma ferramenta poderosa de codificação agentística, mas seu uso contínuo em projetos complexos pode resultar em estouro rápido de contexto, custos desnecessários de API (devido ao reprocessamento contínuo de tokens) e confusões na execução de tarefas se a janela de contexto não for bem gerenciada. 
+A specialized plugin and skill for **Claude Code**, meticulously designed to manage your token budget, shield the **Prompt Cache**, calibrate models/effort, and keep the context window surgical and clean during your development sessions.
 
-Esta skill atua como um "mentor de engenharia de prompt e custos" embutido no seu próprio agente, ensinando o Claude a ser mais econômico, direto e eficiente enquanto trabalha para você.
+**Claude Code** is a powerful agentic coding tool, but continuous usage in complex projects can quickly lead to context bloat, unnecessary API costs (due to continuous token reprocessing), and execution confusion if the context window isn't well managed.
+
+This skill acts as a built-in "prompt engineering and cost mentor" for your agent, teaching Claude to be more economical, direct, and efficient while working for you.
 
 ---
 
-## 📚 Bases e Fundamentos (A Filosofia da Skill)
+## 📚 Foundation & Philosophy
 
-O desenvolvimento desta skill não foi baseado em "achismos", mas sim na documentação oficial e nas diretrizes técnicas de engenharia da **Anthropic**. Ela materializa as práticas recomendadas nos seguintes guias fundamentais:
+The development of this skill is not based on guesswork, but on **Anthropic's** official documentation and engineering guidelines. It embodies the best practices recommended in the following foundational guides:
 
-1. **Eficiência de Sessão & Custos**
-   - [Maximizing the value of your Claude Code sessions](https://claude.com/blog/maximizing-the-value-of-your-claude-code-sessions): Guia central sobre como evitar reprocessamentos caros e quando usar comandos como `/compact` e `/rewind`.
-2. **Uso Avançado de Ferramentas (Tool Use)**
-   - [Advanced Tool Use: Search, Programmatic Calling & Examples](https://www.anthropic.com/engineering/advanced-tool-use): Diretrizes sobre como o modelo deve interagir com o terminal e o sistema de arquivos de forma otimizada (batching, filtragem na origem).
-3. **Engenharia de Prompt e Modelos Específicos**
-   - [Prompting Best Practices & Model Guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices): Regras de estruturação de prompts usando XML tags e eliminação de preâmbulos.
-   - Recomendações específicas por modelo de raciocínio, contemplando como lidar com a verbosidade e a contenção de loops:
+1. **Session Efficiency & Costs**
+   - [Maximizing the value of your Claude Code sessions](https://claude.com/blog/maximizing-the-value-of-your-claude-code-sessions): Core guide on how to avoid expensive reprocessing and when to use commands like `/compact` and `/rewind`.
+2. **Advanced Tool Use**
+   - [Advanced Tool Use: Search, Programmatic Calling & Examples](https://www.anthropic.com/engineering/advanced-tool-use): Guidelines on how the model should interact with the terminal and file system optimally (batching, source filtering).
+3. **Prompt Engineering & Model Guidance**
+   - [Prompting Best Practices & Model Guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices): Rules for structuring prompts using XML tags and eliminating preambles.
+   - Specific recommendations per reasoning model, addressing how to handle verbosity and contain loops:
      - [Prompting Claude Fable 5 & 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1)
      - [Prompting Claude Opus 4.8 & 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5)
      - [Prompting Claude Sonnet 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5)
+4. **Skill Authoring Best Practices**
+   - Built to comply fully with *The Complete Guide to Building Skills for Claude*, featuring Progressive Disclosure (nested reference files), explicit conversational examples, and structured troubleshooting blocks.
 
 ---
 
-## 📦 Instalação (Recomendado via Claude Code)
+## 📦 Installation (Recommended via Claude Code)
 
-Você pode instalar diretamente usando o sistema nativo de plugins/marketplaces do Claude Code:
+You can install directly using Claude Code's native plugin/marketplace system:
 
-### 1. Adicionar o Marketplace
-No chat do Claude Code (ou no terminal):
+### 1. Add the Marketplace
+In the Claude Code chat (or terminal):
 ```bash
 /plugin marketplace add RBNoronha/optimizing-claude-usage-skill
 ```
-*Ou via terminal convencional:*
+*Or via conventional terminal:*
 ```bash
 claude plugin marketplace add RBNoronha/optimizing-claude-usage-skill
 ```
 
-### 2. Instalar a Skill / Plugin
+### 2. Install the Skill / Plugin
 ```bash
 /plugin install optimizing-claude-usage@optimizing-claude-usage
 ```
-*Ou via terminal convencional:*
+*Or via conventional terminal:*
 ```bash
 claude plugin install optimizing-claude-usage@optimizing-claude-usage
 ```
 
 ---
 
-## 🚀 O que a Skill faz (As 5 Alavancas de Otimização)
+## 🚀 What the Skill Does (The 5 Optimization Levers)
 
-Com a skill instalada e ativa, o Claude Code passa a seguir rigorosamente **5 alavancas estratégicas de economia e eficiência**:
+With the skill installed and active, Claude Code strictly follows **5 strategic levers for economy and efficiency**:
 
-### 1. Blindagem do Prompt Cache (Até 90% de Desconto em Tokens)
-O Claude API oferece grandes descontos para contextos que permanecem inalterados (Prompt Caching). A skill ensina o Claude a não quebrar esse cache à toa.
-- **Bloqueio de Parâmetros na Largada:** Alteraçōes de `/model`, `/effort` ou ativação de *Fast mode* no meio da conversa invalidam o cache de prefixo, fazendo com que todo o histórico seja reprocessado com custo cheio. A skill instrui a travar esses parâmetros no início da sessão.
-- **Timing Estratégico de `/compact`:** O prompt cache expira após 1 hora. Compilar e resumir o histórico exige ler toda a conversa; a skill orienta a rodar `/compact` **antes de pausas prolongadas**, aproveitando o cache ainda "quente" com 90% de desconto.
-- **Uso de `/rewind` sobre `/compact`:** Para desvios ou erros recentes, orienta a podar os turnos ruins com `/rewind`, mantendo o histórico anterior 100% em cache com **custo zero de tokens adicionais**.
+### 1. Prompt Cache Shielding (Up to 90% Token Discount)
+The Claude API offers huge discounts for unchanged contexts (Prompt Caching). The skill teaches Claude not to break this cache unnecessarily.
+- **Lock Parameters Early:** Changing `/model`, `/effort`, or toggling *Fast mode* mid-conversation invalidates the prefix cache, causing the entire history to be reprocessed at full cost. The skill instructs locking these parameters at session start.
+- **Strategic `/compact` Timing:** The prompt cache expires after 1 hour. Compiling and summarizing the history requires reading the entire conversation; the skill advises running `/compact` **before long breaks**, taking advantage of the still "warm" cache at a 90% discount.
+- **Using `/rewind` over `/compact`:** For recent deviations or errors, it directs pruning bad turns with `/rewind`, keeping the previous history 100% cached at **zero additional token cost**.
 
-### 2. Higiene de Contexto & Gestão de Sessão
-O contexto inflado é o maior inimigo da precisão de um LLM.
-- **Isolamento de Tarefas com `/clear`:** Impede que o contexto de uma tarefa já resolvida seja arrastado para uma nova feature ou bugfix.
-- **Auditoria de Instruções com `/context`:** Detecta regras infladas no arquivo de diretrizes do projeto (`CLAUDE.md`) e orienta migrar instruções muito repetitivas para skills avulsas sob demanda.
-- **Anexação Direta via `@-mentions`:** Obriga referenciar arquivos como `@src/service.ts`. Sem o `@`, o Claude gasta tokens mais caros (tokens de saída) chamando ferramentas do sistema de arquivos ou fazendo buscas greps que poderiam ser evitadas.
-- **Edições Cirúrgicas (Diffs Pontuais):** Evita reescrever arquivos inteiros de 500+ linhas quando apenas 5 linhas precisam mudar, focando sempre em modificações in-place.
+### 2. Context Hygiene & Session Management
+A bloated context is the biggest enemy of an LLM's accuracy.
+- **Task Isolation with `/clear`:** Prevents dragging context from an already resolved task into a new feature or bugfix.
+- **Instruction Auditing with `/context`:** Detects bloated rules in the project guidelines (`CLAUDE.md`) and advises migrating highly repetitive instructions to on-demand skills.
+- **Direct Attachment via `@-mentions`:** Forces referencing files like `@src/service.ts`. Without the `@`, Claude spends expensive output tokens calling file system tools or making avoidable grep searches.
+- **Surgical Edits (Targeted Diffs):** Avoids rewriting entire 500+ line files when only 5 lines need to change, always focusing on in-place modifications.
 
-### 3. Gestão Avançada de Ferramentas e Eliminação do "Imposto MCP"
-Ferramentas MCP (Model Context Protocol) adicionam funcionalidades, mas seus schemas consomem tokens invisíveis no início de todo prompt.
-- **Combate ao MCP Bloat:** Servidores MCP (GitHub, Slack, Jira, etc.) podem injetar enormes quantidades de tokens de esquema antes mesmo de você digitar algo. A skill ensina o Claude a sugerir a desativação de MCPs desnecessários via `/mcp` ou flags estritas (`--strict-mcp-config`).
-- **Chamada Programática & Filtragem na Origem:** Proíbe injetar logs brutos gigantescos ou dumps de banco de dados diretamente no chat. Orienta a usar pipelines bash (`grep`, `awk`, `head`) ou scripts temporários para que apenas as informações filtradas entrem no contexto.
-- **Loteamento de Chamadas (*Tool-Call Batching*):** Agrupa leituras e inspeções de múltiplos arquivos independentes no mesmo turno, reduzindo o número de requisições enviadas à API e acelerando a resposta.
-- **Flags Silenciosas para Comandos:** Impõe o uso de flags compactas em testes e linters (`--reporter=dot`, `-q`), evitando que centenas de linhas de sucesso fiquem poluindo o histórico.
+### 3. Advanced Tool Management & Eliminating the "MCP Tax"
+MCP (Model Context Protocol) tools add functionality, but their schemas consume invisible tokens at the start of every prompt.
+- **Combating MCP Bloat:** MCP servers (GitHub, Slack, Jira, etc.) can inject massive amounts of schema tokens before you even type anything. The skill teaches Claude to suggest disabling unnecessary MCPs via `/mcp` or strict flags (`--strict-mcp-config`).
+- **Programmatic Calling & Source Filtering:** Prohibits injecting massive raw logs or database dumps directly into the chat. Directs using bash pipelines (`grep`, `awk`, `head`) or temporary scripts so only filtered information enters the context.
+- **Tool-Call Batching:** Groups reads and inspections of multiple independent files in the same turn, reducing the number of requests sent to the API and speeding up the response.
+- **Quiet Flags for Commands:** Enforces the use of compact flags in tests and linters (`--reporter=dot`, `-q`), preventing hundreds of success lines from polluting the history.
 
-### 4. Calibração de Modelo e Esforço por Cenário
-Classifica a tarefa e impede a armadilha do *"começar barato e escalar se falhar"* (pois o custo de diagnosticar código corrompido é muito maior do que usar o modelo correto logo de início):
-- **Claude Fable 5.1 / Mythos 5.1:** Ideal para tarefas multi-dia, desenvolvimento de agentes autônomos e geração end-to-end com regras explícitas de compactação.
-- **Claude Opus 5 / Opus 4.8:** Para refatorações arquiteturais complexas e revisões de código muito sensíveis, onde é preciso ter todas as especificações "up-front" e conter loops de sobreverificação.
-- **Claude Sonnet 5:** Recomendado para o desenvolvimento diário ágil, criação de testes unitários, pequenos bugfixes e novas features com forte controle de verbosidade.
-- **Claude Haiku:** O modelo "trator", excelente para extração mecânica de dados, criação de boilerplates repetitivos e investigações rápidas (triagem) operando como um subagente.
+### 4. Model and Effort Calibration by Scenario
+Classifies the task and prevents the *"start cheap and escalate on failure"* trap (because the cost of diagnosing corrupted code is much higher than using the correct model from the start):
+- **Claude Fable 5.1 / Mythos 5.1:** Ideal for multi-day tasks, autonomous agent development, and end-to-end generation with explicit compaction rules.
+- **Claude Opus 5 / Opus 4.8:** For complex architectural refactors and highly sensitive code reviews, where all specs must be "up-front" and over-verification loops must be contained.
+- **Claude Sonnet 5:** Recommended for agile daily development, unit test creation, small bugfixes, and new features with strong verbosity control.
+- **Claude Haiku:** The "tractor" model, excellent for mechanical data extraction, repetitive boilerplate creation, and fast investigations (triage) operating as a subagent.
 
-### 5. Precisão de Prompting & Eliminação de Preâmbulos
-Como o Claude pensa e entrega os resultados para o usuário:
-- Corta introduções conversacionais vazias (*"Com certeza, vou analisar e fazer o que pediu..."*), saudações desnecessárias e repetições da pergunta original. O foco é gerar apenas o código e as explicações realmente acionáveis.
-- Estrutura contextos complexos de maneira rígida, sempre usando tags XML semânticas (`<context>`, `<specification>`, `<examples>`), o que maximiza a assertividade quando a janela de contexto está cheia.
-
----
-
-## 🛠️ Como a Skill é Acionada no Claude Code
-
-1. **Gatilho Automático (Background):**  
-   O Claude Code percebe a skill instalada e a consulta automaticamente em momentos de estresse de contexto, por exemplo:
-   - Quando o contexto começa a ultrapassar a margem de segurança (~150k tokens).
-   - Quando a sessão está rodando por várias horas consecutivas sem que o histórico tenha sido compactado.
-   - Quando percebe que múltiplos servidores MCP não essenciais estão ativos gerando alto overhead passivo.
-
-2. **Acionamento Manual (Você no controle):**  
-   Você pode direcionar explicitamente o Claude para adotar a postura de otimização a qualquer momento:
-   > *"Claude, revise o consumo de tokens e a higiene da nossa sessão com base na skill optimizing-claude-usage."*
-   > *"Vou iniciar uma grande refatoração agora. Siga rigorosamente as diretrizes da optimizing-claude-usage para que a gente não estoure o cache à toa."*
+### 5. Prompting Precision & Preamble Elimination
+How Claude thinks and delivers results to the user:
+- Cuts empty conversational introductions (*"Certainly, I will analyze and do what you asked..."*), unnecessary greetings, and repetitions of the original question. The focus is on generating only code and truly actionable explanations.
+- Rigidly structures complex contexts, always using semantic XML tags (`<context>`, `<specification>`, `<examples>`), which maximizes assertiveness when the context window is full.
 
 ---
 
-## 📂 Instalação Manual Alternativa (Sem usar o Marketplace)
+## 🛠️ How the Skill is Triggered in Claude Code
 
-Caso você não queira adicionar o marketplace do repositório, pode apenas baixar e salvar a skill diretamente na sua pasta local de configuração do Claude Code:
+1. **Automatic Trigger (Background):**  
+   Claude Code detects the installed skill and consults it automatically during moments of context stress, for example:
+   - When the context starts to exceed the safety margin (~150k tokens).
+   - When the session has been running for several consecutive hours without history compaction.
+   - When it notices multiple non-essential MCP servers are active, generating high passive overhead.
+
+2. **Manual Trigger (You in Control):**  
+   You can explicitly direct Claude to adopt the optimization stance at any moment:
+   > *"Claude, review our token consumption and session hygiene based on the optimizing-claude-usage skill."*
+   > *"I'm going to start a major refactor now. Strictly follow the guidelines from optimizing-claude-usage so we don't blow the cache unnecessarily."*
+
+---
+
+## 📂 Alternative Manual Installation (Without Marketplace)
+
+If you don't want to add the repository marketplace, you can simply download and save the skill directly to your local Claude Code configuration folder:
 
 **Mac / Linux:**
 ```bash
