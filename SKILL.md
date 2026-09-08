@@ -1,127 +1,59 @@
 ---
 name: optimizing-claude-usage
-description: Use when managing Claude usage/budget — context is trending past ~150k tokens, a session has run for hours, subagents are being spawned reflexively, or the same large content is being re-sent. Covers prompt cache preservation, context hygiene, MCP/tool overhead reduction, effort calibration, tool-call batching, subagent controls, and model-specific nuances (Sonnet 5, Opus 5, Fable 5.1).
+description: Audits Claude usage/budget and applies cost-saving practices. Use when context passes ~150k tokens, sessions run for hours, or subagents spawn reflexively. Covers prompt caching, context hygiene, MCP reduction, and batching.
 ---
 
-# Optimizing Claude Usage & Prompting Best Practices
+# Optimizing Usage & Prompting Best Practices
 
-## Overview
+## Important: Progressive Disclosure
+For a deep dive into the 5 optimization levers (Prompt Caching, Context Hygiene, MCP Management, Model Calibration, Prompting Precision), read `references/optimization-patterns.md`.
 
-Reduce token consumption and redundant API/CLI calls without degrading output quality. The economics of a Claude Code session are driven by three interdependent variables:
-1. **Context size:** How much text you force the model to re-read on each turn.
-2. **Prompt cache preservation:** Keeping the prefix intact so history reads run at ~10% cost.
-3. **Model & effort fit:** Matching both the model tier and thinking budget to actual task complexity.
+## Core Instructions
 
-**Core principle:** The cheapest token is the one you never resend. Most waste comes from carrying stale or irrelevant context forward, loading unnecessary tool definitions upfront, and breaking prompt caching mid-flight.
+### Step 1: Pre-Flight Context Audit
+When starting a task or when prompted to audit:
+- Check active MCP servers via `/context` or `/mcp`. Advise disabling unused servers to reduce token overhead.
+- Verify `/model` and `/effort` are appropriate for the task complexity and lock them in. Changing them mid-task breaks the prompt cache.
 
----
+### Step 2: Session Hygiene Enforcement
+- **Compaction Strategy:** Run `/compact` BEFORE stepping away for an hour, using the warm cache (90% discount). Do not compact if the session is ending.
+- **Rollbacks:** Use `/rewind` instead of `/compact` if the last few turns were mistakes, preserving the cache.
+- **Task Boundaries:** Enforce the use of `/clear` between unrelated tasks to prevent context drag.
 
-## When to use this skill
+### Step 3: Tool Execution & Output Control
+- **Filter Raw Output:** Never dump raw multi-megabyte logs or API payloads. Use shell pipelines (e.g., `grep`, `awk`, `head`) to filter data at the source.
+- **Quiet Flags:** Enforce quiet flags for linters/tests (e.g., `pytest -q`, `--reporter=dot`) to avoid polluting context with passing test logs.
+- **Surgical Edits:** Apply targeted diffs rather than rewriting entire files. Output tokens are expensive.
 
-- Context window is approaching ~150k tokens and a logical milestone is reached.
-- A session has been running across multiple disparate tasks or features.
-- Subagents are being spawned reflexively for trivial, one-step lookups.
-- Multiple MCP servers are connected, causing heavy prompt overhead before user input.
-- Large artifacts (logs, bundle outputs, full test suites, specs) are accumulating in history.
-- Switching between different models (Sonnet 5, Opus 5, Fable 5.1) or tuning thinking effort.
+### Step 4: Batching & Delegation
+- **Batch Independent Reads:** Read multiple files or check multiple symbols in a single turn.
+- **Subagents:** Only spawn subagents for heavy noise tasks (broad greps, large log parsing). Run single file reads or targeted greps inline.
 
-**Don't use this skill to:**
-- Skip essential context genuinely needed for multi-file refactors or architectural audits.
-- Force premature model downgrades on ambiguous, high-stakes tasks where subtle errors require costly rewrites.
+## Examples
 
----
+Example 1: Long session management
+User says: "We've been working on this for a while, let's take a break."
+Actions:
+1. Advise the user to run `/compact` before the break.
+2. Explain that the prompt cache expires in an hour, and compacting now uses the warm cache at a 90% discount.
+Result: The user compacts the session affordably.
 
-## Lever 1: Prompt Cache Preservation (90% Discount)
+Example 2: Processing large logs
+User says: "Check this 50MB server log for authentication errors."
+Actions:
+1. Do NOT use `Read` on the entire file.
+2. Run an inline shell command: `grep -i "auth error" server.log | tail -n 50`.
+Result: Only relevant lines enter the context window.
 
-Prompt caching matches request tokens from the beginning forward. Any modification to the prefix invalidates the cache for all subsequent tokens.
+## Troubleshooting
 
-- **Lock `/model` and `/effort` at the start:** Changing either parameter mid-conversation busts the cache, causing the entire conversation history to be re-prefilled at full price. (Note: turning Fast mode off is free, but activating it mid-session forces a re-prefill at Fast mode rates).
-- **Time your `/compact` calls strategically:**
-  - **Before stepping away:** Prompt cache expires after 1 hour (subscription) or 5 minutes (API key). Compaction requires reading the entire history once to write the summary. Running `/compact` while the cache is warm is up to 90% cheaper than compacting after returning from an idle break.
-  - **Amortize compaction cost:** Compaction itself has an upfront token cost. Only compact at phase boundaries if there is meaningfully more work left in the session to recoup that cost across subsequent turns. Never compact right before closing a session.
-- **Use `/rewind` over `/compact` for rollbacks:** If the last few turns went off track, `/rewind` trims turns from the tail, leaving the earlier cached prefix completely intact and costing 0 extra tokens.
+### Error: "Context window limit reached"
+Cause: Accumulation of uncompressed history, bloated MCP schemas, or raw tool outputs.
+Solution: 
+1. Use `/rewind` to undo recent bulky turns.
+2. Advise the user to `/compact` the session.
+3. Suggest disabling unused MCP servers.
 
----
-
-## Lever 2: Context Window & Session Hygiene
-
-Every turn resends the entire conversation history (or its compaction summary). Keep what enters the context minimal and precise.
-
-- **Run `/clear` between tasks:** Do not drag context from a completed feature or bugfix into an unrelated task. Use `/rename` if you want to archive the session, then `/clear` to start with an empty context.
-- **Audit loaded instructions with `/context`:** Check what is injected at session start (e.g., `CLAUDE.md`, system prompts, active MCP tools). Keep `CLAUDE.md` concise and shift workflow-specific logic into on-demand skills. Disable unneeded MCP servers via `/mcp`.
-- **Prefer `@-mentions` over typing paths:** Referencing `@src/utils.ts` in your prompt attaches the file directly to your message payload. Naming the file without `@` forces Claude to spend expensive output tokens calling `Read`, plus input tokens reading it back.
-- **Keep edits targeted:** Instruct Claude to produce targeted surgical diffs rather than rewriting full 500-line files, drastically lowering output token generation (which is priced ~5x higher than input).
-
----
-
-## Lever 3: Advanced Tool Use & MCP Management
-
-According to Anthropic's engineering benchmarks, 5 connected MCP servers can inject 55k+ tokens before any conversation begins, reaching 100k+ with tools like Jira. Moreover, unmanaged raw tool outputs quickly flood the context window.
-
-- **Avoid the "MCP Tax":** Audit connected MCP servers at the start with `/mcp` or `/context`. If a session only requires git and local tests, disable external database, Slack, or ticketing MCPs. When running from the CLI, consider `--strict-mcp-config` or restricting tools via `--tools`.
-- **Programmatic tool calling & output filtering:** Never dump multi-megabyte log files or full API JSON payloads into context. Filter at the source using bash pipelines (e.g. `grep`, `awk`, `head -n 50`) or node/python scripts so only synthesized findings enter the conversation.
-- **Batch independent tool calls (Fable 5.1 / Opus 5 / Sonnet 5):** When reading multiple files or checking multiple symbols, batch them into a single turn rather than sequential turns. This cuts down intermediate round-trips and repeated prompt cache reads.
-- **Enforce quiet flags on repeated commands:** Test runners and linters printing hundreds of passing lines bloat context. Use dot/compact reporters (e.g., `vitest run <file> --reporter=dot`, `pytest -q`). Store these exact command invocations inside `CLAUDE.md`.
-- **Control subagent delegation:**
-  - **Delegate when:** A task creates massive intermediate noise (searching raw server logs, broad grepping, evaluating large directories) where only the final synthesis matters. Subagents operate in clean, isolated context windows, shielding the parent session.
-  - **Do inline when:** Executing single greps, single file inspections, or quick edits. The briefing overhead and independent setup of a subagent costs more than running it directly.
-  - **Model alignment:** For repetitive background lookups, explicitly assign subagents to run on smaller models (e.g., Haiku).
-
----
-
-## Lever 4: Model & Effort Calibration
-
-Anthropic's latest models calibrate response verbosity, thinking depth, and instruction-following differently. Match both model tier and effort level to the task.
-
-| Model Tier | Ideal Workload | Key Prompting & Optimization Nuance |
-|---|---|---|
-| **Claude Fable 5.1 / Mythos 5.1** | Complex multi-day tasks, autonomous agents, end-to-end features | Supports user-facing progress updates; batch tool calls in agent loops; specify explicit compaction rules to retain critical state. |
-| **Claude Opus 5 / Opus 4.8** | Deep architectural refactors, ambiguous requirements, high-stakes review | Strongest coding capability; excels when given full specs up-front; avoid micromanaging intermediate steps; restrict excessive over-verification loops. |
-| **Claude Sonnet 5** | Daily development, standard features, targeted bugfixes, test authoring | Adaptive thinking by default; response length scales to task complexity; specify concise formatting requirements if verbosity creeps up. |
-| **Claude Haiku (e.g. 4.5)** | Fast lookups, boilerplate, subagent triage, simple file transformations | Lowest cost per token; use for mechanical scripts and subagent log processing. |
-
-### The Anti-Pattern: "Start Cheap and Escalate on Failure"
-Do not default to the cheapest model with the intent of escalating only if it fails. A subtle, plausible-looking bug generated by an under-powered model costs more in review time, debugging, and retries than using the right model up front. Pick the appropriate tier immediately based on ambiguity and difficulty.
-
----
-
-## Lever 5: Prompting Precision & Output Control
-
-Unnecessary verbosity in model output is expensive because output (decode) tokens cost roughly 5x more than input tokens.
-
-- **Eliminate conversational preambles:** Instruct Claude directly: *"Provide concise, focused code and explanations. Skip conversational filler, pleasantries, and restating what was asked."*
-- **Use XML structure for multi-source inputs:** When supplying multiple files, requirements, and examples, wrap them in clear semantic tags (`<context>`, `<specification>`, `<examples>`). This improves retrieval accuracy on long contexts and prevents confusion.
-- **State negative constraints clearly:** Tell the model what **not** to touch (e.g., *"Do not modify dependencies, do not refactor surrounding functions, do not add extra documentation"*).
-
----
-
-## Decision Checklist
-
-**Before compacting:**
-- [ ] Is there a natural milestone/phase boundary reached?
-- [ ] Is there enough work remaining in this session to amortize the compaction overhead?
-- [ ] Am I about to take a break long enough for the prompt cache to expire (~1 hour)?
-
-**Before spawning a subagent:**
-- [ ] Will this task generate screens of intermediate output that are useless once completed?
-- [ ] Is the briefing prompt shorter and simpler than doing the work inline?
-
-**Before kicking off a task:**
-- [ ] Are connected MCP servers trimmed down to only what is needed?
-- [ ] Are `/model` and `/effort` locked in for the duration of this session?
-- [ ] Are test commands configured with quiet flags?
-- [ ] Are target files referenced via `@-mentions`?
-
----
-
-## Common Mistakes & Solutions
-
-| Mistake | Root Cause / Impact | Correct Strategy |
-|---|---|---|
-| Leaving unused MCP servers active | Injects 30k-100k+ schema tokens on turn 1 | Disable unneeded servers via `/mcp` or config |
-| Changing `/model` or `/effort` mid-task | Invalidates the prompt cache, causing expensive re-prefill | Set once at session start; `/clear` before changing |
-| Compacting right before ending session | Pays summarization cost with 0 subsequent turns to benefit | Leave uncompacted if closing the session |
-| Neglecting `/rewind` after bad turns | Clutters history with failed reasoning | Use `/rewind` to prune bad turns without cache penalty |
-| Over-using subagents for single reads | Briefing and tool setup exceeds inline execution cost | Run single reads and edits inline |
-| Running verbose test suites repeatedly | Hundreds of passing test lines accumulate in prompt history | Use `--reporter=dot` or `-q` in `CLAUDE.md` |
-| Vague file naming ("fix the auth file") | Forces Claude to use output tokens calling `Read` and searching | Use `@src/auth/service.ts` directly in prompt |
+### Error: "Prompt cache miss (0% cached)" mid-session
+Cause: The user or agent changed the model (`/model`), effort (`/effort`), or toggled Fast mode.
+Solution: Advise the user to set these parameters at the start of the session and lock them in. Use `/clear` before changing models if possible.
