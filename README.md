@@ -39,11 +39,11 @@ You can install directly using Claude Code's native plugin/marketplace system:
 ### 1. Add the Marketplace
 In the Claude Code chat (or terminal):
 ```bash
-/plugin marketplace add RBNoronha/optimizing-claude-usage-skill
+/plugin marketplace add RBNoronha/optimizing-claude-usage
 ```
 *Or via conventional terminal:*
 ```bash
-claude plugin marketplace add RBNoronha/optimizing-claude-usage-skill
+claude plugin marketplace add RBNoronha/optimizing-claude-usage
 ```
 
 ### 2. Install the Skill / Plugin
@@ -117,11 +117,11 @@ If you don't want to add the repository marketplace, you can simply download and
 **Mac / Linux:**
 ```bash
 mkdir -p ~/.claude/skills/optimizing-claude-usage
-curl -L -o ~/.claude/skills/optimizing-claude-usage/SKILL.md https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage-skill/main/SKILL.md
+curl -L -o ~/.claude/skills/optimizing-claude-usage/SKILL.md https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage/main/SKILL.md
 ```
 
 **Windows (PowerShell):**
 ```powershell
 New-Item -ItemType Directory -Force -Path $HOME\.claude\skills\optimizing-claude-usage
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage-skill/main/SKILL.md -OutFile $HOME\.claude\skills\optimizing-claude-usage\SKILL.md
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage/main/SKILL.md -OutFile $HOME\.claude\skills\optimizing-claude-usage\SKILL.md
 ```
