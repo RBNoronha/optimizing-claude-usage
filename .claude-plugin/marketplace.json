@@ -1,0 +1,15 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "optimizing-claude-usage",
+  "description": "Skills for optimizing Claude Code token usage and prompt caching",
+  "owner": {
+    "name": "Renan Noronha"
+  },
+  "plugins": [
+    {
+      "name": "optimizing-claude-usage",
+      "source": "./",
+      "description": "A skill to help manage token budget, context window, and prompt caching in Claude Code."
+    }
+  ]
+}

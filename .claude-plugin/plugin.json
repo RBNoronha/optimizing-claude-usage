@@ -1,0 +1,11 @@
+{
+  "name": "optimizing-claude-usage",
+  "version": "1.0.0",
+  "description": "A skill to help manage token budget, context window, and prompt caching in Claude Code.",
+  "author": {
+    "name": "Renan Noronha"
+  },
+  "skills": [
+    "."
+  ]
+}

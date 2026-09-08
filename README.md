@@ -1,26 +1,43 @@
 # Optimizing Claude Code Usage Skill
 
-A specialized skill for **Claude Code** designed to help you manage your token budget, preserve the prompt cache, and keep your context window clean. 
+A specialized plugin/skill for **Claude Code** designed to help you manage your token budget, preserve the prompt cache, and keep your context window clean.
 
 Based on Anthropic's official best practices for [Maximizing the value of your Claude Code sessions](https://claude.com/blog/maximizing-the-value-of-your-claude-code-sessions), this skill guides Claude (and you) on how to operate efficiently within the CLI environment.
 
-## 🚀 What it does
+---
 
-When this skill is active, it advises Claude on how to:
-- Preserve the **Prompt Cache** (which makes context reading 90% cheaper) by avoiding actions that break it.
-- Use **Subagents** correctly to isolate "noisy" outputs (like reading large logs) from polluting the main context window.
-- Apply **Context Size Management** techniques, such as using `/clear` between tasks, `/context` to audit the prompt, and `@-mentioning` files instead of making expensive `Read` tool calls.
-- Optimize **Model Selection** based on the actual difficulty of the task, rather than just defaulting to the cheapest model and escalating on failure.
+## 📦 Instalação via Claude Code (Recomendado)
 
-## 📦 Installation
+Você pode instalar diretamente usando o sistema de plugins e marketplaces do Claude Code:
 
-In Claude Code, skills are simply markdown files placed in a `.claude/skills` directory. You can install this globally (for all your projects) or locally (just for one project).
+### 1. Adicionar o Marketplace
+No chat do Claude Code (ou no terminal):
+```bash
+/plugin marketplace add RBNoronha/optimizing-claude-usage-skill
+```
+*Ou via terminal:*
+```bash
+claude plugin marketplace add RBNoronha/optimizing-claude-usage-skill
+```
 
-### Global Installation (Recommended)
+### 2. Instalar a Skill / Plugin
+```bash
+/plugin install optimizing-claude-usage@optimizing-claude-usage
+```
+*Ou via terminal:*
+```bash
+claude plugin install optimizing-claude-usage@optimizing-claude-usage
+```
 
-To make this skill available across all your Claude Code sessions, add it to your user home directory:
+---
 
-**Mac/Linux:**
+## 📂 Instalação Manual (Alternativa)
+
+Se preferir baixar diretamente para a pasta de skills sem usar o gerenciador de plugins:
+
+### Global (Todos os projetos)
+
+**Mac / Linux:**
 ```bash
 mkdir -p ~/.claude/skills/optimizing-claude-usage
 curl -L -o ~/.claude/skills/optimizing-claude-usage/SKILL.md https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage-skill/main/SKILL.md
@@ -32,35 +49,20 @@ New-Item -ItemType Directory -Force -Path $HOME\.claude\skills\optimizing-claude
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage-skill/main/SKILL.md -OutFile $HOME\.claude\skills\optimizing-claude-usage\SKILL.md
 ```
 
-### Local Installation (Per Project)
+---
 
-To use it only in a specific project, run this inside the project's root folder:
+## 🚀 O que ela faz
 
-**Mac/Linux:**
-```bash
-mkdir -p .claude/skills/optimizing-claude-usage
-curl -L -o .claude/skills/optimizing-claude-usage/SKILL.md https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage-skill/main/SKILL.md
-```
+Quando ativa, esta skill instrui o Claude Code a:
+- **Preservar o Prompt Cache** (que deixa leituras de contexto 90% mais baratas) evitando ações que quebram o cache (como alterar modelo ou esforço no meio do turno).
+- **Usar Subagentes estrategicamente** para isolar saídas ruidosas (como varreduras e logs longos) sem poluir a sessão principal.
+- **Gerenciar tamanho de contexto**, incentivando `/clear` entre tarefas, `/context` para auditar ferramentas e `@-mentions` de arquivos em vez de chamadas `Read`.
+- **Escolher o modelo ideal** para a complexidade da tarefa logo de início.
 
-**Windows (PowerShell):**
-```powershell
-New-Item -ItemType Directory -Force -Path .claude\skills\optimizing-claude-usage
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/RBNoronha/optimizing-claude-usage-skill/main/SKILL.md -OutFile .claude\skills\optimizing-claude-usage\SKILL.md
-```
+## 🛠️ Como usar
 
-## 🛠️ How it works
-
-Once installed, Claude Code will automatically detect the skill. It is configured to trigger automatically when:
-- The context window is trending past ~150k tokens.
-- A session has run for hours without a clear phase boundary.
-- Subagents are being spawned reflexively for trivial tasks.
-- The same large content (docs, logs, specs) is being re-sent across turns.
-
-You can also explicitly invoke it by telling Claude Code:
-> "Review your usage based on the optimizing-claude-usage skill"
-
-## 💡 Top Tips for Claude Code Users
-1. **Set `/model` and `/effort` up front.** Changing them mid-session breaks the prompt cache!
-2. **Type `/compact` before you take a coffee break.** The cache expires after 1 hour. Compacting while the cache is warm is extremely cheap; doing it later costs full price.
-3. **Use `/clear` between tasks.** Don't drag old context into a new bug fix.
-4. **Use quiet flags for commands.** (e.g., `npm test --reporter=dot`). Long terminal outputs get stuck in your context forever!
+Uma vez instalado o plugin:
+- Ele é carregado automaticamente pelo Claude Code.
+- Dispara automaticamente em sessões longas ou quando o contexto passa de ~150k tokens.
+- Você pode forçar a análise a qualquer momento digitando:
+  > *"Revise o uso de tokens da sessão com base na skill optimizing-claude-usage"*
